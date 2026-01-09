@@ -198,16 +198,25 @@ def on_startup() -> None:
     do not exist yet, and will not drop or modify existing ones.
     """
     # Initialize database schema
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+        print("✓ Database schema initialized successfully")
+    except Exception as e:
+        print(f"✗ Error initializing database: {e}")
+        # Don't fail deployment if DB is temporarily unavailable
+        # Railway will retry automatically
 
     # Start weather notification scheduler (06:00 daily, 12:00 if AQI bad)
     # Note: Scheduler might not work in serverless environment like Vercel
     # Consider using external cron service for production
     try:
         start_default_scheduler()
+        print("✓ Scheduler started successfully")
     except Exception as e:
         # Log but don't fail startup if scheduler fails (common in serverless)
-        print(f"Warning: Could not start scheduler: {e}")
+        print(f"⚠ Warning: Could not start scheduler: {e}")
+
+    print("✓ Application startup complete")
 
 
 if __name__ == "__main__":
