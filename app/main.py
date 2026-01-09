@@ -1,5 +1,6 @@
 from typing import Union
 from pathlib import Path
+import os
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, status
@@ -70,6 +71,10 @@ def health_check():
 
 # CORS configuration to allow frontend (Vite) to call this API
 # Include all common localhost variations for development
+
+# Get allowed origins from environment or use defaults
+frontend_url = os.getenv("FRONTEND_URL", "")
+
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -81,12 +86,24 @@ origins = [
     "http://127.0.0.1:8000",
 ]
 
+# Add production frontend URL if set
+if frontend_url:
+    origins.append(frontend_url)
+
+# Also add Railway production URLs dynamically
+if os.getenv("RAILWAY_ENVIRONMENT") == "production":
+    # Allow all Railway subdomains for hawa project
+    origins.extend([
+        "https://hawa-fe-sl2-production.up.railway.app",
+        "https://hawa-be-sl2-production.up.railway.app",
+    ])
+
 # CORS Middleware configuration
 # Note: Cannot use allow_origins=["*"] with allow_credentials=True
 # So we include common localhost variations for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # All common localhost ports
+    allow_origins=origins,  # All common localhost ports + production URLs
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods including OPTIONS
     allow_headers=["*"],  # Allow all headers
@@ -95,12 +112,20 @@ app.add_middleware(
 
 # Explicit OPTIONS handler for preflight requests
 @app.options("/{full_path:path}")
-async def options_handler(full_path: str):
+async def options_handler(request: Request, full_path: str):
     """Handle OPTIONS preflight requests"""
+    # Get the origin from request
+    origin = request.headers.get("origin", "*")
+
+    # Check if origin is allowed
+    allowed_origins = origins if origins else ["*"]
+    if origin not in allowed_origins and allowed_origins != ["*"]:
+        origin = allowed_origins[0] if allowed_origins else "*"
+
     return JSONResponse(
         status_code=200,
         headers={
-            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Origin": origin,
             "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
             "Access-Control-Allow-Headers": "*",
             "Access-Control-Allow-Credentials": "true",
