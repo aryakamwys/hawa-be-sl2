@@ -1,6 +1,7 @@
 """
 Vector Database Service untuk Weather Knowledge
 Menggunakan pgvector untuk similarity search
+Note: Embeddings disabled untuk Railway deployment (RAM constraint)
 """
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -12,18 +13,11 @@ from app.db.models.weather_knowledge import WeatherKnowledge
 
 class VectorService:
     """Service untuk manage vector embeddings dan similarity search"""
-    
+
     def __init__(self):
-        # Gunakan sentence-transformers untuk embeddings lokal
-        try:
-            from sentence_transformers import SentenceTransformer
-            # Model multilingual untuk support 3 bahasa
-            self.embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
-            self.embedding_dim = 384
-        except ImportError:
-            self.embedding_model = None
-            self.embedding_dim = 384
-            print("Warning: sentence-transformers not available, embeddings will be disabled")
+        # Embeddings disabled untuk hemat RAM di Railway
+        self.embedding_model = None
+        self.embedding_dim = 384
 
         # Toggle pgvector usage via env (default: False untuk hindari error casting)
         self.use_pgvector = os.getenv("USE_PGVECTOR", "false").lower() == "true"

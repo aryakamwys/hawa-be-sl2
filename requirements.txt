@@ -13,7 +13,6 @@ groq>=0.37.1
 pgvector>=0.4.1
 pandas>=2.3.3
 numpy==2.3.5
-sentence-transformers>=5.1.2
 cryptography>=46.0.3
 gspread>=6.2.1
 google-auth>=2.41.0,<2.42
