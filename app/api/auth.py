@@ -26,6 +26,15 @@ from app.db.models.user import User
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+@router.api_route("/login", methods=["GET", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"])
+def login_method_not_allowed():
+    """Catch-all for wrong HTTP methods to /auth/login"""
+    raise HTTPException(
+        status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+        detail="Method not allowed. Use POST /auth/login with JSON body."
+    )
+
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
     service = AuthService(db)
@@ -45,24 +54,29 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
+    """Login endpoint - accepts POST requests with JSON body"""
     try:
+        print(f"Login attempt for email: {payload.email}")
         service = AuthService(db)
         token = service.authenticate_user(email=payload.email, password=payload.password)
         if token is None:
+            print(f"Authentication failed for: {payload.email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
             )
-        
+
         # Get user to include role in response
         from app.db.models.user import User
         user = db.query(User).filter(User.email == payload.email).first()
         if user is None:
+            print(f"User not found after auth: {payload.email}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect email or password",
             )
-        
+
+        print(f"Login successful for: {payload.email}, role: {user.role.value}")
         return TokenResponse(
             access_token=token,
             role=user.role.value  # "user", "admin", or "industry"

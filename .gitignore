@@ -44,3 +44,4 @@ htmlcov/
 pgdata/
 mongodata/*.json
 gen-lang-client-*.json
+.env.railway
