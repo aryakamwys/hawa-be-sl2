@@ -11,3 +11,4 @@ from app.db.models.weather_knowledge import WeatherKnowledge  # noqa: F401
 
 
 
+

@@ -1,15 +1,17 @@
 {
     "version": 2,
+    "buildCommand": "echo 'No build needed'",
+    "outputDirectory": ".",
     "builds": [
       {
-        "src": "app.py",
+        "src": "index.py",
         "use": "@vercel/python"
       }
     ],
     "routes": [
       {
         "src": "/(.*)",
-        "dest": "app.py"
+        "dest": "index.py"
       }
     ]
   }

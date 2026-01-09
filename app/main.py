@@ -27,7 +27,46 @@ from app.core.config import get_settings
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(dotenv_path=BASE_DIR / ".env", override=False)
 
-app = FastAPI()
+app = FastAPI(
+    title="Hawa API",
+    description="Air quality monitoring and weather API",
+    version="0.1.0"
+)
+
+# Include routers immediately (not in startup event for Vercel compatibility)
+app.include_router(auth_router)
+app.include_router(admin_router)
+app.include_router(weather_router)
+
+# Import and include other routers (lazy import to avoid circular deps)
+from app.api.weather_realtime import router as realtime_router
+app.include_router(realtime_router)
+
+from app.api.compliance import router as compliance_router
+app.include_router(compliance_router)
+
+from app.api.feedback import router as feedback_router
+app.include_router(feedback_router)
+
+from app.api.admin_feedback import router as admin_feedback_router
+app.include_router(admin_feedback_router)
+
+# Root endpoint
+@app.get("/")
+def root():
+    """Root endpoint"""
+    return {
+        "message": "Hawa API",
+        "version": "0.1.0",
+        "docs": "/docs",
+        "health": "/health"
+    }
+
+# Health check endpoint
+@app.get("/health")
+def health_check():
+    """Health check endpoint"""
+    return {"status": "ok", "service": "hawa-api"}
 
 # CORS configuration to allow frontend (Vite) to call this API
 # Include all common localhost variations for development
@@ -153,36 +192,22 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.on_event("startup")
 def on_startup() -> None:
     """
-    Initialize database schema.
+    Initialize database schema and start background services.
 
     Base.metadata.create_all is idempotent: it will create tables only if they
     do not exist yet, and will not drop or modify existing ones.
     """
+    # Initialize database schema
     Base.metadata.create_all(bind=engine)
 
-    # Include routers
-    app.include_router(auth_router)
-    app.include_router(admin_router)  # Admin routes - protected by get_current_admin
-    app.include_router(weather_router)  # Weather routes - protected by get_current_user
-    
-    # Import and include realtime router (lazy import to avoid circular deps)
-    from app.api.weather_realtime import router as realtime_router
-    app.include_router(realtime_router)  # Realtime warnings routes
-    
-    # Import and include compliance router (lazy import to avoid circular deps)
-    from app.api.compliance import router as compliance_router
-    app.include_router(compliance_router)  # Compliance routes - protected by get_current_industry_user
-
-    # Import and include feedback router (lazy import to avoid circular deps)
-    from app.api.feedback import router as feedback_router
-    app.include_router(feedback_router)  # Feedback routes - protected by get_current_user
-
-    # Import and include admin feedback router (lazy import to avoid circular deps)
-    from app.api.admin_feedback import router as admin_feedback_router
-    app.include_router(admin_feedback_router)  # Admin feedback routes - protected by get_current_admin
-
     # Start weather notification scheduler (06:00 daily, 12:00 if AQI bad)
-    start_default_scheduler()
+    # Note: Scheduler might not work in serverless environment like Vercel
+    # Consider using external cron service for production
+    try:
+        start_default_scheduler()
+    except Exception as e:
+        # Log but don't fail startup if scheduler fails (common in serverless)
+        print(f"Warning: Could not start scheduler: {e}")
 
 
 if __name__ == "__main__":
