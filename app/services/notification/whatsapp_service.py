@@ -2,7 +2,13 @@
 import os
 from typing import Dict, Any, Optional
 from datetime import datetime, timedelta
-import pywhatkit as pwt
+
+try:
+    import pywhatkit as pwt
+    PYWHATKIT_AVAILABLE = True
+except ImportError:
+    PYWHATKIT_AVAILABLE = False
+    print("Warning: pywhatkit not available. WhatsApp notifications disabled.")
 
 
 class WhatsAppService:
@@ -18,6 +24,10 @@ class WhatsAppService:
         language: str = "id"
     ) -> bool:
         """Kirim peringatan cuaca ke WhatsApp."""
+        if not PYWHATKIT_AVAILABLE:
+            print("WhatsApp service not available. Skipping notification.")
+            return False
+
         try:
             message = self._format_warning_message(recommendation, language)
             now = datetime.now()
@@ -31,9 +41,9 @@ class WhatsAppService:
                 tab_close=True,
                 close_time=3
             )
-            
+
             return True
-            
+
         except Exception as e:
             print(f"Error sending WhatsApp message: {e}")
             return False
@@ -45,6 +55,10 @@ class WhatsAppService:
         language: str = "id"
     ) -> bool:
         """Kirim peringatan cuaca ke WhatsApp secara instan."""
+        if not PYWHATKIT_AVAILABLE:
+            print("WhatsApp service not available. Skipping notification.")
+            return False
+
         try:
             message = self._format_warning_message(recommendation, language)
             pwt.sendwhatmsg_instantly(
@@ -54,9 +68,9 @@ class WhatsAppService:
                 tab_close=True,
                 close_time=3
             )
-            
+
             return True
-            
+
         except Exception as e:
             print(f"Error sending WhatsApp message: {e}")
             return False
@@ -156,6 +170,10 @@ class WhatsAppService:
         Returns:
             True jika berhasil
         """
+        if not PYWHATKIT_AVAILABLE:
+            print("WhatsApp service not available. Skipping notification.")
+            return False
+
         try:
             risk_emoji = {
                 "low": "🟢",
@@ -163,12 +181,12 @@ class WhatsAppService:
                 "high": "🟠",
                 "critical": "🔴"
             }.get(risk_level.lower(), "⚠️")
-            
+
             formatted_message = f"{risk_emoji} *PERINGATAN KUALITAS UDARA*\n\n{message}\n\n_HAWA - Air Quality Monitoring System_"
-            
+
             now = datetime.now()
             send_time = now + timedelta(minutes=1)
-            
+
             pwt.sendwhatmsg(
                 phone_no=phone_number,
                 message=formatted_message,
@@ -178,9 +196,9 @@ class WhatsAppService:
                 tab_close=True,
                 close_time=3
             )
-            
+
             return True
-            
+
         except Exception as e:
             print(f"Error sending WhatsApp message: {e}")
             return False
